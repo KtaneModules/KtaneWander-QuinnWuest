@@ -295,20 +295,20 @@ public class WanderScript : MonoBehaviour
         var dead = new bool[16];
         for (int i = 0; i < StarObjs.Length; i++)
             StarObjs[i].SetActive(true);
+        yield return new WaitForSeconds(0.964f);
         if (_actionHistory.Count == 0)
         {
-            yield return new WaitForSeconds(0.964f);
             for (int i = 0; i < 16; i++)
             {
                 StarObjs[i].SetActive(true);
                 StartCoroutine(PulseObject(StarObjs[i], new Vector3(0.15f, 0.15f, 0.15f)));
             }
+            yield return new WaitForSeconds(0.964f);
         }
         else
         {
             for (int a = 0; a < _actionHistory.Count; a++)
             {
-                yield return new WaitForSeconds(0.964f);
                 var alive = new List<int>();
                 for (int i = 0; i < current.Length; i++)
                 {
@@ -325,6 +325,7 @@ public class WanderScript : MonoBehaviour
                     StarObjs[i].SetActive(alive.Contains(i));
                     StartCoroutine(PulseObject(StarObjs[i], new Vector3(0.15f, 0.15f, 0.15f)));
                 }
+                yield return new WaitForSeconds(0.964f);
             }
         }
         ActionAudio.Stop();
