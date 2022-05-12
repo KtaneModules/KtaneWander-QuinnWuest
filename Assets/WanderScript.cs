@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using UnityEngine;
 using Rnd = UnityEngine.Random;
 
@@ -37,6 +38,8 @@ public class WanderScript : MonoBehaviour
     private int _aliveCount;
     private int _goal;
     private bool _canMove;
+    private bool _firstTimeGettingOne;
+    private static readonly string[] _colorNames = new string[] { "BLACK", "BLUE", "GREEN", "CYAN", "RED", "MAGENTA", "YELLOW", "WHITE" };
 
     private void Start()
     {
@@ -44,7 +47,8 @@ public class WanderScript : MonoBehaviour
         for (int btn = 0; btn < ArrowSels.Length; btn++)
             ArrowSels[btn].OnInteract += ArrowPress(btn);
         MiddleSel.OnInteract += MiddlePress;
-        Debug.LogFormat("[Wander #{0}] 404 Logging not found!", _moduleId);
+        // Debug.LogFormat("[Wander #{0}] 404 Logging not found!", _moduleId);
+        // Above was for manual challenge.
         Setup();
     }
 
@@ -92,19 +96,32 @@ public class WanderScript : MonoBehaviour
                     _deadPositions[i] = true;
             }
             AliveCountText.text = _aliveCount.ToString();
+            var dir = new string[] { "UP", "RIGHT", "DOWN", "LEFT" };
             if (_aliveCount == 1)
+            {
+                if (_firstTimeGettingOne)
+                {
+                    _firstTimeGettingOne = false;
+                    Debug.LogFormat("[Wander #{0}] Moved {1}. There is now {2} alive star remaining.", _moduleId, dir[btn], _aliveCount);
+                    Debug.LogFormat("[Wander #{0}] Revealing goal coordinate: {1}", _moduleId, GetCoord(_goal));
+                }
                 GoalText.gameObject.SetActive(true);
-            if (_aliveCount == 0)
+            }
+            else if (_aliveCount == 0)
             {
                 _isAnimating = true;
+                Debug.LogFormat("[Maze Manual Challenge #{0}] All stars have died. Strike.", _moduleId);
                 StartCoroutine(ShowActionHistory());
             }
+            else
+                Debug.LogFormat("[Wander #{0}] Moved {1}. There are now {2} alive stars remaining.", _moduleId, dir[btn], _aliveCount);
             return false;
         };
     }
 
     private void Setup()
     {
+        _firstTimeGettingOne = true;
         AliveCountText.gameObject.SetActive(false);
         GoalText.gameObject.SetActive(false);
         _goal = Rnd.Range(0, 16);
@@ -165,10 +182,13 @@ public class WanderScript : MonoBehaviour
 
     private void DoMazeTransformations()
     {
+        LogMaze(_originalWalls, false);
         _transformedWalls = SetTempWalls(_originalWalls);
         var tempWalls = SetTempWalls(_originalWalls);
+        Debug.LogFormat("[Wander #{0}] The color of the walls is {1}.", _moduleId, _colorNames[_wallColor]);
         if ((_wallColor & 4) == 4)
         {
+            Debug.LogFormat("[Wander #{0}] Applying RED transformation, horizontal flip.", _moduleId);
             for (int i = 0; i < _transformedWalls.Length; i++)
                 for (int j = 0; j < _transformedWalls[i].Length; j++)
                     _transformedWalls[i][j] = tempWalls[i][(_transformedWalls[i].Length - 1) - j];
@@ -176,12 +196,14 @@ public class WanderScript : MonoBehaviour
         }
         if ((_wallColor & 2) == 2)
         {
+            Debug.LogFormat("[Wander #{0}] Applying GREEN transformation, vertical flip.", _moduleId);
             for (int i = 0; i < _transformedWalls.Length; i++)
                 for (int j = 0; j < _transformedWalls[i].Length; j++)
                     _transformedWalls[i][j] = tempWalls[(_transformedWalls.Length - 1) - i][j];
         }
         if ((_wallColor & 1) == 1)
         {
+            Debug.LogFormat("[Wander #{0}] Applying BLUE transformation, row and column swap.", _moduleId);
             var str = "";
             str += "#" + (_transformedWalls[0][0] ? "#" : "-") + "#" + (_transformedWalls[0][1] ? "#" : "-") + "#" + (_transformedWalls[0][2] ? "#" : "-") + "#" + (_transformedWalls[0][3] ? "#" : "-") + "#";
             str += (_transformedWalls[1][0] ? "#" : "-") + "-" + (_transformedWalls[1][1] ? "#" : "-") + "-" + (_transformedWalls[1][2] ? "#" : "-") + "-" + (_transformedWalls[1][3] ? "#" : "-") + "-" + (_transformedWalls[1][4] ? "#" : "-") + "";
@@ -209,7 +231,6 @@ public class WanderScript : MonoBehaviour
     private void ShowMaze()
     {
         var str = "";
-        LogMaze(_originalWalls, false);
         LogMaze(_transformedWalls, true);
         for (int i = 0; i < _transformedWalls.Length; i++)
             for (int j = 0; j < _transformedWalls[i].Length; j++)
@@ -225,11 +246,13 @@ public class WanderScript : MonoBehaviour
 
     private void LogMaze(bool[][] walls, bool transformed)
     {
-        // Debug.LogFormat("[Wander #{0}] Maze walls, {1}:", _moduleId, transformed ? "after transformation" : "before transformation");
-        // Debug.LogFormat("[Wander #{0}] {1}", _moduleId, GetMazeString(walls, true));
+        Debug.LogFormat("[Wander #{0}] Maze walls, {1}:", _moduleId, transformed ? "after transformation" : "before transformation");
+        var arr = GetMazeString(walls, true);
+        for (int i = 0; i < arr.Length; i++)
+            Debug.LogFormat("[Wander #{0}] {1}", _moduleId, arr[i]);
     }
 
-    private string GetMazeString(bool[][] walls, bool newLines)
+    private string[] GetMazeString(bool[][] walls, bool newLines)
     {
         var str = "";
         str += string.Format("#{0}#{1}#{2}#{3}#{4}", walls[0][0] ? "#" : "-", walls[0][1] ? "#" : "-", walls[0][2] ? "#" : "-", walls[0][3] ? "#" : "-", newLines ? "\n" : "");
@@ -241,7 +264,7 @@ public class WanderScript : MonoBehaviour
         str += string.Format("#{0}#{1}#{2}#{3}#{4}", walls[6][0] ? "#" : "-", walls[6][1] ? "#" : "-", walls[6][2] ? "#" : "-", walls[6][3] ? "#" : "-", newLines ? "\n" : "");
         str += string.Format("{0}-{1}-{2}-{3}-{4}{5}", walls[7][0] ? "#" : "-", walls[7][1] ? "#" : "-", walls[7][2] ? "#" : "-", walls[7][3] ? "#" : "-", walls[1][4] ? "#" : "-", newLines ? "\n" : "");
         str += string.Format("#{0}#{1}#{2}#{3}#", walls[8][0] ? "#" : "-", walls[8][1] ? "#" : "-", walls[8][2] ? "#" : "-", walls[8][3] ? "#" : "-");
-        return str;
+        return str.Split('\n');
     }
 
     private bool[][] GetSwappedWalls(string str)
@@ -275,7 +298,7 @@ public class WanderScript : MonoBehaviour
     private bool CheckValidMove(int num, int dir)
     {
         var pos = num / 4 * 16 + 8 + (num / 4 * 2) + num % 4 * 2 + 2;
-        var walls = GetMazeString(_originalWalls, false);
+        var walls = GetMazeString(_originalWalls, false).Join("");
         if (dir == 0)
             return walls[pos - 9] == '-';
         if (dir == 1)
@@ -331,7 +354,6 @@ public class WanderScript : MonoBehaviour
         ActionAudio.Stop();
         if (_aliveCount == 0)
         {
-            // Debug.LogFormat("[Maze Manual Challenge #{0}] All positions have died. Strike.", _moduleId);
             Module.HandleStrike();
             Reset();
             yield break;
@@ -359,21 +381,21 @@ public class WanderScript : MonoBehaviour
                 }
                 for (int i = 0; i < VertexObjs.Length; i++)
                     VertexObjs[i].GetComponent<MeshRenderer>().material = WallMats[_wallColor];
-                // Debug.LogFormat("[Maze Manual Challenge #{0}] Successfully submitted at position {1}. Module solved.", _moduleId, GetCoord(curPos));
+                Debug.LogFormat("[Maze Manual Challenge #{0}] Successfully submitted at position {1}. Module solved.", _moduleId, GetCoord(curPos));
                 for (int i = 0; i < StarObjs.Length; i++)
                     StarObjs[i].GetComponent<MeshRenderer>().material = WallMats[2];
                 yield break;
             }
             else
             {
-                // Debug.LogFormat("[Maze Manual Challenge #{0}] Incorrectly submitted at position {1}. Strike.", _moduleId, GetCoord(curPos));
+                Debug.LogFormat("[Maze Manual Challenge #{0}] Incorrectly submitted at position {1}. Strike.", _moduleId, GetCoord(curPos));
                 Module.HandleStrike();
                 Reset();
             }
         }
         else
         {
-            // Debug.LogFormat("[Maze Manual Challenge #{0}] Attempted to submit when there were multiple live positions. Strike.", _moduleId);
+            Debug.LogFormat("[Maze Manual Challenge #{0}] Attempted to submit when there were multiple live positions. Strike.", _moduleId);
             Module.HandleStrike();
             Reset();
         }
@@ -398,20 +420,177 @@ public class WanderScript : MonoBehaviour
     }
 
 #pragma warning disable 0414
-    private readonly string TwitchHelpMessage = "!There is an ongoing manual challenge!";
+    private readonly string TwitchHelpMessage = "!{0} press urdl [Press the up, right, down, left buttons.] | !{0} press submit [Press the submit button.] | 'press' is optional.";
 #pragma warning restore 0414
 
     private IEnumerator ProcessTwitchCommand(string command)
     {
         yield return null;
-        yield return "sendtochat There is an ongoing manual challenge!";
-        yield break;
+        if (_isAnimating)
+        {
+            yield return "sendtochaterror You cannot interact with the module during its animation! Command ignored.";
+            yield break;
+        }
+        var m = Regex.Match(command, @"^\s*submit\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        if (m.Success)
+        {
+            yield return null;
+            yield return "solve";
+            yield return "strike";
+            MiddleSel.OnInteract();
+            yield break;
+        }
+        if (!_canMove)
+        {
+            yield return "sendtochaterror You cannot press the arrow buttons during this phase! Command ignored.";
+            yield break;
+        }
+        command = (command.ToUpperInvariant().StartsWith("PRESS ") ? command.Substring(6) : command).ToUpperInvariant();
+        var list = new List<int>();
+        for (int i = 0; i < command.Length; i++)
+        {
+            var ix = "URDL ".IndexOf(command[i]);
+            if (ix == 4)
+                continue;
+            if (ix == -1)
+            {
+                yield return "sendtochaterror " + command[i] + "is not a valid movement! Command ignored.";
+                yield break;
+            }
+            list.Add(ix);
+        }
+        yield return null;
+        yield return "solve";
+        yield return "strike";
+        for (int i = 0; i < list.Count; i++)
+        {
+            ArrowSels[list[i]].OnInteract();
+            yield return new WaitForSeconds(0.1f);
+        }
+    }
+
+    struct QueueItem
+    {
+        public int Cell;
+        public int Parent;
+        public int Direction;
+        public QueueItem(int cell, int parent, int dir)
+        {
+            Cell = cell;
+            Parent = parent;
+            Direction = dir;
+        }
     }
 
     private IEnumerator TwitchHandleForcedSolve()
     {
-        _moduleSolved = true;
-        Module.HandlePass();
-        yield break;
+        // Go to movement phase.
+        if (!_canMove)
+        {
+            MiddleSel.OnInteract();
+            yield return new WaitForSeconds(0.1f);
+        }
+
+        // If there is only one star left, don't attempt to kill off stars.
+        if (_aliveCount == 1)
+            goto oneLeft;
+
+        // Move from the current position to the furthest corner, in an attempt to kill off all but one star.
+        var visited1 = new Dictionary<int, QueueItem>();
+        var q1 = new Queue<QueueItem>();
+        int cur1 = -1;
+        for (int i = 0; i < _currentPositions.Length; i++)
+            if (!_deadPositions[i])
+                cur1 = _currentPositions[i];
+        int sol1 =
+            cur1 % 4 < 2 && cur1 / 4 < 2 ? 15 :
+            cur1 % 4 < 2 && cur1 / 4 > 1 ? 3 :
+            cur1 % 4 > 1 && cur1 / 4 < 2 ? 0 :
+            12;
+        // More specifically, identify the quadrant of the current position, and travel to the corner in the opposite quadrant.
+        q1.Enqueue(new QueueItem(cur1, -1, 0));
+        while (q1.Count > 0)
+        {
+            var qi = q1.Dequeue();
+            if (visited1.ContainsKey(qi.Cell))
+                continue;
+            visited1[qi.Cell] = qi;
+            if (qi.Cell == sol1)
+                break;
+            if (CheckValidMove(qi.Cell, 0))
+                q1.Enqueue(new QueueItem(qi.Cell - 4, qi.Cell, 0));
+            if (CheckValidMove(qi.Cell, 1))
+                q1.Enqueue(new QueueItem(qi.Cell + 1, qi.Cell, 1));
+            if (CheckValidMove(qi.Cell, 2))
+                q1.Enqueue(new QueueItem(qi.Cell + 4, qi.Cell, 2));
+            if (CheckValidMove(qi.Cell, 3))
+                q1.Enqueue(new QueueItem(qi.Cell - 1, qi.Cell, 3));
+        }
+        var r1 = sol1;
+        var path1 = new List<int>();
+        while (true)
+        {
+            var nr = visited1[r1];
+            if (nr.Parent == -1)
+                break;
+            path1.Add(nr.Direction);
+            r1 = nr.Parent;
+        }
+        for (int i = 0; i < path1.Count - 1; i++)
+        {
+            var d = path1[(path1.Count - 1) - i];
+            ArrowSels[d].OnInteract();
+            yield return new WaitForSeconds(0.1f);
+            if (_aliveCount == 1) // Stop the movement path prematurely if there's only one star left.
+                goto oneLeft;
+        }
+        
+        // Now that one star is left, travel to the goal.
+        oneLeft:;
+        var visited2 = new Dictionary<int, QueueItem>();
+        var q2 = new Queue<QueueItem>();
+        int cur2 = -1;
+        for (int i = 0; i < _currentPositions.Length; i++)
+            if (!_deadPositions[i])
+                cur2 = _currentPositions[i];
+        q2.Enqueue(new QueueItem(cur2, -1, 0));
+        if (cur2 == _goal)
+            goto atGoal;
+        while (q2.Count > 0)
+        {
+            var qi = q2.Dequeue();
+            if (visited2.ContainsKey(qi.Cell))
+                continue;
+            visited2[qi.Cell] = qi;
+            if (qi.Cell == _goal)
+                break;
+            if (CheckValidMove(qi.Cell, 0))
+                q2.Enqueue(new QueueItem(qi.Cell - 4, qi.Cell, 0));
+            if (CheckValidMove(qi.Cell, 1))
+                q2.Enqueue(new QueueItem(qi.Cell + 1, qi.Cell, 1));
+            if (CheckValidMove(qi.Cell, 2))
+                q2.Enqueue(new QueueItem(qi.Cell + 4, qi.Cell, 2));
+            if (CheckValidMove(qi.Cell, 3))
+                q2.Enqueue(new QueueItem(qi.Cell - 1, qi.Cell, 3));
+        }
+        var r2 = _goal;
+        var path2 = new List<int>();
+        while (true)
+        {
+            var nr = visited2[r2];
+            if (nr.Parent == -1)
+                break;
+            path2.Add(nr.Direction);
+            r2 = nr.Parent;
+        }
+        for (int i = path2.Count - 1; i >= 0; i--)
+        {
+            ArrowSels[path2[i]].OnInteract();
+            yield return new WaitForSeconds(0.1f);
+        }
+        atGoal:
+        MiddleSel.OnInteract();
+        while (!_moduleSolved)
+            yield return true;
     }
 }
