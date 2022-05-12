@@ -512,11 +512,11 @@ public class WanderScript : MonoBehaviour
             if (!_deadPositions[i])
                 cur1 = _currentPositions[i];
         int sol1 =
-            cur1 % 4 < 2 && cur1 / 4 < 2 ? 15 :
-            cur1 % 4 < 2 && cur1 / 4 > 1 ? 3 :
-            cur1 % 4 > 1 && cur1 / 4 < 2 ? 0 :
+            cur1 % 4 < 2 && cur1 / 4 < 2 ? 3 :
+            cur1 % 4 < 2 && cur1 / 4 > 1 ? 0 :
+            cur1 % 4 > 1 && cur1 / 4 < 2 ? 15 :
             12;
-        // More specifically, identify the quadrant of the current position, and travel to the corner in the opposite quadrant.
+        // More specifically, identify the quadrant of the current position, and travel to the corner in the next quadrant clockwise.
         q1.Enqueue(new QueueItem(cur1, -1, 0));
         while (q1.Count > 0)
         {
