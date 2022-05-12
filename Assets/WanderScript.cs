@@ -99,11 +99,19 @@ public class WanderScript : MonoBehaviour
             var dir = new string[] { "UP", "RIGHT", "DOWN", "LEFT" };
             if (_aliveCount == 1)
             {
+                var curPos = -1;
+                for (int i = 0; i < 16; i++)
+                    if (!_deadPositions[i])
+                        curPos = _currentPositions[i];
                 if (_firstTimeGettingOne)
                 {
                     _firstTimeGettingOne = false;
-                    Debug.LogFormat("[Wander #{0}] Moved {1}. There is now {2} alive star remaining.", _moduleId, dir[btn], _aliveCount);
+                    Debug.LogFormat("[Wander #{0}] Moved {1}. There is now {2} alive star remaining at {3}.", _moduleId, dir[btn], _aliveCount, GetCoord(curPos));
                     Debug.LogFormat("[Wander #{0}] Revealing goal coordinate: {1}", _moduleId, GetCoord(_goal));
+                }
+                else
+                {
+                    Debug.LogFormat("[Wander #{0}] Moved {1} to {2}.", _moduleId, dir[btn], GetCoord(curPos));
                 }
                 GoalText.gameObject.SetActive(true);
             }
@@ -496,6 +504,7 @@ public class WanderScript : MonoBehaviour
             goto oneLeft;
 
         // Move from the current position to the furthest corner, in an attempt to kill off all but one star.
+        tryAgain:
         var visited1 = new Dictionary<int, QueueItem>();
         var q1 = new Queue<QueueItem>();
         int cur1 = -1;
@@ -544,6 +553,8 @@ public class WanderScript : MonoBehaviour
             if (_aliveCount == 1) // Stop the movement path prematurely if there's only one star left.
                 goto oneLeft;
         }
+        if (_aliveCount != 1)
+            goto tryAgain;
         
         // Now that one star is left, travel to the goal.
         oneLeft:;
