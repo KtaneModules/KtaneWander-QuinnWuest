@@ -440,7 +440,8 @@ public class WanderScript : MonoBehaviour
             yield break;
         }
         var m = Regex.Match(command, @"^\s*submit\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-        if (m.Success)
+        var m2 = Regex.Match(command, @"^\s*press\s+submit\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        if (m.Success || m2.Success)
         {
             yield return null;
             yield return "solve";
@@ -503,7 +504,7 @@ public class WanderScript : MonoBehaviour
         if (_aliveCount == 1)
             goto oneLeft;
 
-        // Move from the current position to the furthest corner, in an attempt to kill off all but one star.
+        // Move from the current position (the last living star in reading order) to a target position, in an attempt to kill off all but one star.
         tryAgain:
         var visited1 = new Dictionary<int, QueueItem>();
         var q1 = new Queue<QueueItem>();
