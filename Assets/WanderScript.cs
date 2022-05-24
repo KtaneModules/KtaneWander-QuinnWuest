@@ -194,21 +194,6 @@ public class WanderScript : MonoBehaviour
         _transformedWalls = SetTempWalls(_originalWalls);
         var tempWalls = SetTempWalls(_originalWalls);
         Debug.LogFormat("[Wander #{0}] The color of the walls is {1}.", _moduleId, _colorNames[_wallColor]);
-        if ((_wallColor & 4) == 4)
-        {
-            Debug.LogFormat("[Wander #{0}] Applying RED transformation, horizontal flip.", _moduleId);
-            for (int i = 0; i < _transformedWalls.Length; i++)
-                for (int j = 0; j < _transformedWalls[i].Length; j++)
-                    _transformedWalls[i][j] = tempWalls[i][(_transformedWalls[i].Length - 1) - j];
-            tempWalls = SetTempWalls(_transformedWalls);
-        }
-        if ((_wallColor & 2) == 2)
-        {
-            Debug.LogFormat("[Wander #{0}] Applying GREEN transformation, vertical flip.", _moduleId);
-            for (int i = 0; i < _transformedWalls.Length; i++)
-                for (int j = 0; j < _transformedWalls[i].Length; j++)
-                    _transformedWalls[i][j] = tempWalls[(_transformedWalls.Length - 1) - i][j];
-        }
         if ((_wallColor & 1) == 1)
         {
             Debug.LogFormat("[Wander #{0}] Applying BLUE transformation, row and column swap.", _moduleId);
@@ -223,6 +208,22 @@ public class WanderScript : MonoBehaviour
             str += (_transformedWalls[7][0] ? "#" : "-") + "-" + (_transformedWalls[7][1] ? "#" : "-") + "-" + (_transformedWalls[7][2] ? "#" : "-") + "-" + (_transformedWalls[7][3] ? "#" : "-") + "-" + (_transformedWalls[7][4] ? "#" : "-") + "";
             str += "#" + (_transformedWalls[8][0] ? "#" : "-") + "#" + (_transformedWalls[8][1] ? "#" : "-") + "#" + (_transformedWalls[8][2] ? "#" : "-") + "#" + (_transformedWalls[8][3] ? "#" : "-") + "#";
             _transformedWalls = SetTempWalls(GetSwappedWalls(str));
+            tempWalls = SetTempWalls(_transformedWalls);
+        }
+        if ((_wallColor & 2) == 2)
+        {
+            Debug.LogFormat("[Wander #{0}] Applying GREEN transformation, vertical flip.", _moduleId);
+            for (int i = 0; i < _transformedWalls.Length; i++)
+                for (int j = 0; j < _transformedWalls[i].Length; j++)
+                    _transformedWalls[i][j] = tempWalls[(_transformedWalls.Length - 1) - i][j];
+            tempWalls = SetTempWalls(_transformedWalls);
+        }
+        if ((_wallColor & 4) == 4)
+        {
+            Debug.LogFormat("[Wander #{0}] Applying RED transformation, horizontal flip.", _moduleId);
+            for (int i = 0; i < _transformedWalls.Length; i++)
+                for (int j = 0; j < _transformedWalls[i].Length; j++)
+                    _transformedWalls[i][j] = tempWalls[i][(_transformedWalls[i].Length - 1) - j];
         }
         ShowMaze();
     }
