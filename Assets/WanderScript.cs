@@ -118,7 +118,7 @@ public class WanderScript : MonoBehaviour
             else if (_aliveCount == 0)
             {
                 _isAnimating = true;
-                Debug.LogFormat("[Maze Manual Challenge #{0}] All stars have died. Strike.", _moduleId);
+                Debug.LogFormat("[Wander #{0}] All stars have died. Strike.", _moduleId);
                 StartCoroutine(ShowActionHistory());
             }
             else
@@ -390,21 +390,21 @@ public class WanderScript : MonoBehaviour
                 }
                 for (int i = 0; i < VertexObjs.Length; i++)
                     VertexObjs[i].GetComponent<MeshRenderer>().material = WallMats[_wallColor];
-                Debug.LogFormat("[Maze Manual Challenge #{0}] Successfully submitted at position {1}. Module solved.", _moduleId, GetCoord(curPos));
+                Debug.LogFormat("[Wander #{0}] Successfully submitted at position {1}. Module solved.", _moduleId, GetCoord(curPos));
                 for (int i = 0; i < StarObjs.Length; i++)
                     StarObjs[i].GetComponent<MeshRenderer>().material = WallMats[2];
                 yield break;
             }
             else
             {
-                Debug.LogFormat("[Maze Manual Challenge #{0}] Incorrectly submitted at position {1}. Strike.", _moduleId, GetCoord(curPos));
+                Debug.LogFormat("[Wander #{0}] Incorrectly submitted at position {1}. Strike.", _moduleId, GetCoord(curPos));
                 Module.HandleStrike();
                 Reset();
             }
         }
         else
         {
-            Debug.LogFormat("[Maze Manual Challenge #{0}] Attempted to submit when there were multiple live positions. Strike.", _moduleId);
+            Debug.LogFormat("[Wander #{0}] Attempted to submit when there were multiple live positions. Strike.", _moduleId);
             Module.HandleStrike();
             Reset();
         }
