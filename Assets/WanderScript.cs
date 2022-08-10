@@ -429,7 +429,7 @@ public class WanderScript : MonoBehaviour
     }
 
 #pragma warning disable 0414
-    private readonly string TwitchHelpMessage = "!{0} press urdl [Press the up, right, down, left buttons.] | !{0} press submit [Press the submit button.] | 'press' is optional.";
+    private readonly string TwitchHelpMessage = "!{0} press urdl [Press the up, right, down, left buttons.] | !{0} press screen [Press the screen.] | 'press' is optional.";
 #pragma warning restore 0414
 
     private IEnumerator ProcessTwitchCommand(string command)
@@ -440,8 +440,8 @@ public class WanderScript : MonoBehaviour
             yield return "sendtochaterror You cannot interact with the module during its animation! Command ignored.";
             yield break;
         }
-        var m = Regex.Match(command, @"^\s*submit\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-        var m2 = Regex.Match(command, @"^\s*press\s+submit\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        var m = Regex.Match(command, @"^\s*(submit|screen)\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        var m2 = Regex.Match(command, @"^\s*press\s+(submit|screen)\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
         if (m.Success || m2.Success)
         {
             yield return null;
