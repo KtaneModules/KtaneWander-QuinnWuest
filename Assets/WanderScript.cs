@@ -28,8 +28,8 @@ public class WanderScript : MonoBehaviour
     private bool _moduleSolved;
 
     private bool[][] _originalWalls = new bool[9][] { new bool[4], new bool[5], new bool[4], new bool[5], new bool[4], new bool[5], new bool[4], new bool[5], new bool[4] };
-    private bool[][] _visitedCells = new bool[4][] { new bool[4], new bool[4], new bool[4], new bool[4] };
     private bool[][] _transformedWalls = new bool[9][] { new bool[4], new bool[5], new bool[4], new bool[5], new bool[4], new bool[5], new bool[4], new bool[5], new bool[4] };
+    private bool[][] _visitedCells = new bool[4][] { new bool[4], new bool[4], new bool[4], new bool[4] };
     private int _wallColor;
     private int[] _currentPositions;
     private bool[] _deadPositions;
@@ -47,7 +47,6 @@ public class WanderScript : MonoBehaviour
         for (int btn = 0; btn < ArrowSels.Length; btn++)
             ArrowSels[btn].OnInteract += ArrowPress(btn);
         MiddleSel.OnInteract += MiddlePress;
-        // Debug.LogFormat("[Wander #{0}] 404 Logging not found!", _moduleId);
         // Above was for manual challenge.
         Setup();
     }
@@ -481,15 +480,27 @@ public class WanderScript : MonoBehaviour
 
     struct QueueItem
     {
-        public int Cell;
+        public int AliveStars;  // bit field; used only in stage 1
+        public int Cell;    // used only in stage 2
+
         public int Parent;
         public int Direction;
-        public QueueItem(int cell, int parent, int dir)
+        public QueueItem(int parent, int dir, int cell = 0, int aliveStars = 0)
         {
             Cell = cell;
             Parent = parent;
             Direction = dir;
+            AliveStars = aliveStars;
         }
+    }
+
+    private int newAliveStars(int aliveStars, int dir)
+    {
+        var result = 0;
+        for (var i = 0; i < 16; i++)
+            if (CheckValidMove(i, (dir + 2) % 4) && (aliveStars & (1 << (dir == 0 ? i + 4 : dir == 1 ? i - 1 : dir == 2 ? i - 4 : i + 1))) != 0)
+                result += 1 << i;
+        return result;
     }
 
     private IEnumerator TwitchHandleForcedSolve()
@@ -501,43 +512,31 @@ public class WanderScript : MonoBehaviour
             yield return new WaitForSeconds(0.1f);
         }
 
-        // If there is only one star left, don't attempt to kill off stars.
-        if (_aliveCount == 1)
-            goto oneLeft;
-
-        // Move from the current position (the last living star in reading order) to a target position, in an attempt to kill off all but one star.
-        tryAgain:
-        var visited1 = new Dictionary<int, QueueItem>();
+        // Move around in an attempt to kill off all but one star.
+        var visited1 = new Dictionary<int, QueueItem>();    // key is the bitfield of alive stars
         var q1 = new Queue<QueueItem>();
-        int cur1 = -1;
-        for (int i = 0; i < _currentPositions.Length; i++)
-            if (!_deadPositions[i])
-                cur1 = _currentPositions[i];
-        int sol1 =
-            cur1 % 4 < 2 && cur1 / 4 < 2 ? 3 :
-            cur1 % 4 < 2 && cur1 / 4 > 1 ? 0 :
-            cur1 % 4 > 1 && cur1 / 4 < 2 ? 15 :
-            12;
+        int cur1 = Enumerable.Range(0, 16).Select(bit => _deadPositions[bit] ? 0 : (1 << bit)).Sum();
+        int finalAliveStars = 0;
+
         // More specifically, identify the quadrant of the current position, and travel to the corner in the next quadrant clockwise.
-        q1.Enqueue(new QueueItem(cur1, -1, 0));
+        q1.Enqueue(new QueueItem(-1, 0, aliveStars: cur1));
         while (q1.Count > 0)
         {
             var qi = q1.Dequeue();
-            if (visited1.ContainsKey(qi.Cell))
+            if (visited1.ContainsKey(qi.AliveStars) || qi.AliveStars == 0)
                 continue;
-            visited1[qi.Cell] = qi;
-            if (qi.Cell == sol1)
+            visited1[qi.AliveStars] = qi;
+            if ((qi.AliveStars & (qi.AliveStars - 1)) == 0)
+            {
+                finalAliveStars = qi.AliveStars;
                 break;
-            if (CheckValidMove(qi.Cell, 0))
-                q1.Enqueue(new QueueItem(qi.Cell - 4, qi.Cell, 0));
-            if (CheckValidMove(qi.Cell, 1))
-                q1.Enqueue(new QueueItem(qi.Cell + 1, qi.Cell, 1));
-            if (CheckValidMove(qi.Cell, 2))
-                q1.Enqueue(new QueueItem(qi.Cell + 4, qi.Cell, 2));
-            if (CheckValidMove(qi.Cell, 3))
-                q1.Enqueue(new QueueItem(qi.Cell - 1, qi.Cell, 3));
+            }
+            q1.Enqueue(new QueueItem(qi.AliveStars, 0, aliveStars: newAliveStars(qi.AliveStars, 0)));
+            q1.Enqueue(new QueueItem(qi.AliveStars, 1, aliveStars: newAliveStars(qi.AliveStars, 1)));
+            q1.Enqueue(new QueueItem(qi.AliveStars, 2, aliveStars: newAliveStars(qi.AliveStars, 2)));
+            q1.Enqueue(new QueueItem(qi.AliveStars, 3, aliveStars: newAliveStars(qi.AliveStars, 3)));
         }
-        var r1 = sol1;
+        var r1 = finalAliveStars;
         var path1 = new List<int>();
         while (true)
         {
@@ -547,26 +546,22 @@ public class WanderScript : MonoBehaviour
             path1.Add(nr.Direction);
             r1 = nr.Parent;
         }
-        for (int i = 0; i < path1.Count - 1; i++)
+
+        for (int i = path1.Count - 1; i >= 0; i--)
         {
-            var d = path1[(path1.Count - 1) - i];
+            var d = path1[i];
             ArrowSels[d].OnInteract();
             yield return new WaitForSeconds(0.1f);
-            if (_aliveCount == 1) // Stop the movement path prematurely if there's only one star left.
-                goto oneLeft;
         }
-        if (_aliveCount != 1)
-            goto tryAgain;
-        
+
         // Now that one star is left, travel to the goal.
-        oneLeft:;
         var visited2 = new Dictionary<int, QueueItem>();
         var q2 = new Queue<QueueItem>();
         int cur2 = -1;
         for (int i = 0; i < _currentPositions.Length; i++)
             if (!_deadPositions[i])
                 cur2 = _currentPositions[i];
-        q2.Enqueue(new QueueItem(cur2, -1, 0));
+        q2.Enqueue(new QueueItem(-1, 0, cur2));
         if (cur2 == _goal)
             goto atGoal;
         while (q2.Count > 0)
@@ -578,13 +573,13 @@ public class WanderScript : MonoBehaviour
             if (qi.Cell == _goal)
                 break;
             if (CheckValidMove(qi.Cell, 0))
-                q2.Enqueue(new QueueItem(qi.Cell - 4, qi.Cell, 0));
+                q2.Enqueue(new QueueItem(qi.Cell, 0, qi.Cell - 4));
             if (CheckValidMove(qi.Cell, 1))
-                q2.Enqueue(new QueueItem(qi.Cell + 1, qi.Cell, 1));
+                q2.Enqueue(new QueueItem(qi.Cell, 1, qi.Cell + 1));
             if (CheckValidMove(qi.Cell, 2))
-                q2.Enqueue(new QueueItem(qi.Cell + 4, qi.Cell, 2));
+                q2.Enqueue(new QueueItem(qi.Cell, 2, qi.Cell + 4));
             if (CheckValidMove(qi.Cell, 3))
-                q2.Enqueue(new QueueItem(qi.Cell - 1, qi.Cell, 3));
+                q2.Enqueue(new QueueItem(qi.Cell, 3, qi.Cell - 1));
         }
         var r2 = _goal;
         var path2 = new List<int>();
